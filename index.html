@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1424">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>동행메이트</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1424; --card:#182036; --card2:#1f2944; --line:#2a3555;
+    --text:#eef1f8; --sub:#9aa5c0; --gold:#f2c94c; --gold2:#e9b53a;
+    --green:#3ecf8e; --red:#e5485d; --blue:#5aa9ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',system-ui,sans-serif}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+  .screen{display:none;flex:1;flex-direction:column;padding:16px 18px 28px}
+  .screen.on{display:flex}
+  header.bar{display:flex;align-items:center;gap:10px;padding:4px 0 14px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  header.bar h2{flex:1;text-align:center;margin:0;font-size:18px}
+  .back{background:none;border:0;color:var(--text);font-size:22px;width:36px;height:36px;cursor:pointer}
+  .ph{width:36px}
+  h1{font-size:34px;font-weight:900;margin:6px 0 4px;text-align:center}
+  .muted{color:var(--sub);font-size:14px}
+  .center{text-align:center}
+  .badge{display:inline-block;border:1px solid var(--gold);color:var(--gold);border-radius:999px;padding:5px 14px;font-size:13px;font-weight:700}
+  .field{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 14px;margin:8px 0}
+  .field label{display:block;font-size:12px;color:var(--sub);margin-bottom:3px}
+  .field input,.field select{width:100%;background:transparent;border:0;outline:0;color:var(--text);font-size:16px;font-family:inherit}
+  .field select option{background:var(--card)}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  .btn{display:block;width:100%;border:0;border-radius:999px;padding:16px;font-size:17px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:12px}
+  .btn.gold{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#1b1b1b}
+  .btn.red{background:var(--red);color:#fff}
+  .btn.green{background:var(--green);color:#0d2a1d}
+  .btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line)}
+  .btn.sm{padding:10px 14px;font-size:14px;margin:0;width:auto;display:inline-block}
+  .btn:disabled{opacity:.5}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+  .chip{background:var(--card);border:1px solid var(--line);color:var(--sub);border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  .chip.on{border-color:var(--gold);color:var(--gold);background:#2a2614}
+  .hero{background:radial-gradient(ellipse at top,#26325a,#141b30);border-radius:0 0 32px 32px;margin:-16px -18px 16px;padding:28px 18px 26px;text-align:center}
+  .live{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:12px 18px;display:flex;justify-content:space-between;font-size:14px;margin-bottom:14px}
+  .live b{color:var(--gold)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:26px 8px;text-align:center;cursor:pointer;font-size:16px;font-weight:700;color:var(--text);font-family:inherit}
+  .tile .ic{font-size:30px;display:block;margin-bottom:8px}
+  .tile.sos{border-color:#7a2433;background:#2a1520;color:#ff8a9a}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:8px 0}
+  .card .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card .nm{font-weight:700;font-size:16px}
+  .tag{font-size:11px;color:var(--green);border:1px solid #2b6b50;border-radius:999px;padding:2px 8px}
+  .tag.gold{color:var(--gold);border-color:#6b5a25}
+  .card .rt{color:var(--sub);font-size:13px;margin-top:4px}
+  .card .act{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .sec{font-weight:700;color:var(--gold);margin:16px 0 4px;font-size:15px}
+  .empty{color:var(--sub);text-align:center;padding:20px;font-size:14px}
+  #map{height:300px;border-radius:20px;overflow:hidden;border:1px solid var(--line);margin-bottom:12px;z-index:0}
+  .toggle{display:flex;justify-content:space-between;align-items:center}
+  .stat{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);margin:4px 0}
+  .stat b{color:var(--text);font-weight:500}
+  .sosbig{width:170px;height:170px;border-radius:50%;margin:20px auto;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:64px;box-shadow:0 0 0 18px #e5485d33,0 0 0 36px #e5485d18;animation:pulse 1.4s infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 26px #e5485d22,0 0 0 48px #e5485d0c}}
+  .check{width:150px;height:150px;border-radius:50%;margin:40px auto 20px;border:4px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:70px;color:var(--gold);box-shadow:0 0 40px #f2c94c44}
+  .overlay{position:fixed;inset:0;background:#3a0a14f2;z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+  .overlay.on{display:flex}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--card2);border:1px solid var(--line);padding:12px 18px;border-radius:999px;font-size:14px;z-index:1100;opacity:0;transition:.3s;pointer-events:none;max-width:90%}
+  .toast.on{opacity:1}
+  .note{font-size:12px;color:var(--sub);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-top:10px;line-height:1.5}
+  .mk{background:var(--gold);color:#111;font-weight:700;font-size:12px;padding:3px 8px;border-radius:999px;white-space:nowrap;border:2px solid #fff;box-shadow:0 2px 6px #0006}
+  .mk.me{background:var(--blue);color:#fff}
+  .mk.sos{background:var(--red);color:#fff}
+  a.link{color:var(--gold)}
+  pre{white-space:pre-wrap;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 설정 필요 -->
+  <section class="screen" id="s-setup">
+    <h1>동행메이트</h1>
+    <p class="center muted">아직 Firebase 설정이 안 되어 있어요.<br>index.html 맨 아래의 FIREBASE_CONFIG를 채워 주세요.</p>
+  </section>
+
+  <!-- 가입 -->
+  <section class="screen" id="s-join">
+    <div class="center" style="margin-top:20px"><span class="badge">친구끼리 쓰는 안전 귀가 앱</span></div>
+    <h1>🌙 동행메이트</h1>
+    <p class="center muted" style="margin-top:0">늦은 밤 귀갓길, 혼자가 아니도록</p>
+    <div class="field"><label>모임 코드 (같은 코드를 입력한 친구끼리만 보여요)</label><input id="j-group" placeholder="예: kiu-team1" maxlength="30"></div>
+    <div class="row">
+      <div class="field"><label>닉네임</label><input id="j-nick" placeholder="예: 윤하늘" maxlength="12"></div>
+      <div class="field"><label>학과</label><input id="j-dept" placeholder="예: 간호학과" maxlength="15"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>학번 (연도만)</label><input id="j-year" placeholder="예: 26" inputmode="numeric" maxlength="2"></div>
+      <div class="field"><label>비상연락처 (내 폰에만 저장)</label><input id="j-contact" placeholder="010-0000-0000" inputmode="tel" maxlength="14"></div>
+    </div>
+    <button class="btn gold" id="j-go">시작하기</button>
+    <div class="note">🔒 비밀번호는 받지 않아요. 비상연락처는 이 폰에만 저장되고 서버에 올라가지 않아요. 내 위치는 <b>위치 공유를 켰을 때만</b> 같은 모임 친구들에게 보여요.</div>
+  </section>
+
+  <!-- 홈 -->
+  <section class="screen" id="s-home">
+    <div class="hero">
+      <div style="font-size:42px">🧑‍🤝‍🧑</div>
+      <h1 style="margin:4px 0">동행메이트</h1>
+      <span class="badge" id="h-me">-</span>
+    </div>
+    <div class="live"><span>지금 <b id="h-live">0</b>명 귀가 중</span><span class="muted" id="h-group">-</span></div>
+    <div class="grid">
+      <button class="tile" data-go="find"><span class="ic">👥</span>동행 찾기</button>
+      <button class="tile" data-go="share"><span class="ic">🛡️</span>안전 귀가</button>
+      <button class="tile" data-go="map"><span class="ic">📍</span>친구 위치</button>
+      <button class="tile sos" data-go="sos"><span class="ic">🚨</span>긴급 SOS</button>
+    </div>
+    <div class="sec">모임 멤버 <span class="muted" id="h-count"></span></div>
+    <div id="h-members" class="muted" style="font-size:14px;line-height:1.8"></div>
+    <button class="btn ghost" id="h-logout" style="margin-top:24px">프로필 수정 / 모임 나가기</button>
+  </section>
+
+  <!-- 동행 찾기 -->
+  <section class="screen" id="s-find">
+    <header class="bar"><button class="back" data-go="home">←</button><h2>동행 찾기</h2><span class="ph"></span></header>
+    <div class="field"><label>📍 출발지</label><input id="f-from" value="경일대 도서관"></div>
+    <div class="chips" data-for="f-from"><button class="chip">경일대 도서관</button><button class="chip">18호관 앞</button><button class="chip">정문 버스정류장</button><button class="chip">학생회관 앞</button></div>
+    <div class="field"><label>🚩 목적지</label><input id="f-to" value="부호리 원룸촌"></div>
+    <div class="chips" data-for="f-to"><button class="chip">하양역 방면</button><button class="chip">부호리 원룸촌</button><button class="chip">기숙사</button><button class="chip">경일대 정문</button></div>
+    <div class="field"><label>🕒 출발 예정 시간</label><input id="f-time" type="time"></div>
+    <div class="chips" id="f-timechips"><button class="chip" data-min="0">지금 바로</button><button class="chip" data-min="10">10분 뒤</button><button class="chip" data-min="30">30분 뒤</button><button class="chip" data-min="60">1시간 뒤</button></div>
+    <button class="btn gold" id="f-post">내 귀갓길 올리기</button>
+    <div class="sec">내가 올린 귀갓길</div>
+    <div id="f-mine"></div>
+    <div class="sec">✨ 같은 모임 친구들의 귀갓길</div>
+    <div id="f-list"></div>
+  </section>
+
+  <!-- 안전 귀가 (위치 공유) -->
+  <section class="screen" id="s-share">
+    <header class="bar"><button class="back" data-go="home">←</button><h2>안전 귀가</h2><span class="ph" id="sh-on" style="color:var(--green);font-weight:700;font-size:13px;width:auto"></span></header>
+    <div id="map"></div>
+    <div class="card">
+      <div class="field" style="margin:0 0 8px"><label>목적지</label><input id="sh-to" placeholder="예: 부호리 원룸촌"></div>
+      <div class="stat"><span>공유 상태</span><b id="sh-state">꺼짐</b></div>
+      <div class="stat"><span>마지막 전송</span><b id="sh-last">-</b></div>
+      <div class="stat"><span>정확도</span><b id="sh-acc">-</b></div>
+      <div class="stat"><span>공유 시간</span><b id="sh-timer">-</b></div>
+    </div>
+    <button class="btn green" id="sh-start">위치 공유 시작하고 출발</button>
+    <button class="btn gold" id="sh-arrive" style="display:none">✅ 도착 완료하기</button>
+    <button class="btn ghost" id="sh-stop" style="display:none">공유만 중지</button>
+    <div class="note">📱 아이폰은 <b>화면이 꺼지거나 다른 앱으로 가면 위치 전송이 멈춰요.</b> 귀가하는 동안 이 화면을 켜 두세요(자동으로 화면 꺼짐 방지를 시도해요). 도착하면 내 위치는 바로 지워져요.</div>
+  </section>
+
+  <!-- 친구 위치 지도 -->
+  <section class="screen" id="s-map">
+    <header class="bar"><button class="back" data-go="home">←</button><h2>친구 위치</h2><span class="ph"></span></header>
+    <div id="map2" style="height:380px;border-radius:20px;overflow:hidden;border:1px solid var(--line);margin-bottom:12px"></div>
+    <div id="m-list"></div>
+  </section>
+
+  <!-- SOS -->
+  <section class="screen" id="s-sos">
+    <header class="bar"><button class="back" data-go="home">←</button><h2>긴급 SOS</h2><span class="ph"></span></header>
+    <div id="sos-ready">
+      <p class="center muted">누르면 같은 모임 친구들에게 내 위치와 함께<br>긴급 알림이 전송돼요.</p>
+      <div class="sosbig" style="animation:none;cursor:pointer" id="sos-fire">🚨</div>
+      <p class="center" style="font-weight:700">버튼을 눌러 SOS 보내기</p>
+    </div>
+    <div id="sos-sent" style="display:none">
+      <div class="sosbig">🚨</div>
+      <h2 class="center" style="margin:0"><span style="color:var(--red)">긴급 상황</span>을 알렸어요</h2>
+      <p class="center muted" id="sos-info">친구들에게 위치를 보냈어요.</p>
+      <div class="card"><div class="stat"><span>내 위치</span><b id="sos-pos">확인 중…</b></div></div>
+      <a class="btn red" href="tel:112" style="text-align:center;text-decoration:none">📞 112 전화하기</a>
+      <a class="btn ghost" id="sos-sms" href="#" style="text-align:center;text-decoration:none">💬 비상연락처에 위치 문자 보내기</a>
+      <button class="btn ghost" id="sos-cancel">괜찮아졌어요 (SOS 해제)</button>
+    </div>
+    <div class="note">⚠️ 이 앱은 경찰이나 학교 보안팀에 자동으로 신고하지 않아요. 위험할 땐 <b>112에 직접 전화</b>하세요. 친구 알림은 <b>앱을 열어 둔 친구</b>에게만 바로 떠요.</div>
+  </section>
+
+  <!-- 도착 -->
+  <section class="screen" id="s-done">
+    <div class="check">✓</div>
+    <h1 style="font-size:26px">안전하게 도착했어요!</h1>
+    <p class="center muted">오늘도 무사히 귀가하셨습니다 💛<br>친구들에게 도착 알림을 보냈어요.</p>
+    <button class="btn gold" data-go="home" style="margin-top:auto">확인</button>
+  </section>
+</div>
+
+<!-- 친구 SOS 수신 -->
+<div class="overlay" id="ov">
+  <div style="font-size:80px">🚨</div>
+  <h1 style="font-size:28px" id="ov-title">친구가 SOS를 보냈어요!</h1>
+  <p id="ov-body" style="color:#ffd0d6"></p>
+  <a class="btn gold" id="ov-map" target="_blank" rel="noopener" style="text-decoration:none;max-width:360px">🗺️ 위치 지도에서 보기</a>
+  <a class="btn red" href="tel:112" style="text-decoration:none;max-width:360px">📞 112 전화하기</a>
+  <button class="btn ghost" id="ov-close" style="max-width:360px">확인했어요</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+/* ============================================================
+   🔧 여기에 Firebase 설정을 붙여 넣으세요 (Firebase 콘솔 → 프로젝트 설정 → 내 앱)
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDBDQJ-ZyXIJUYYiYYtaaBRc-WKqNKyf-4",
+  authDomain: "mate-161c6.firebaseapp.com",
+  projectId: "mate-161c6",
+  storageBucket: "mate-161c6.firebasestorage.app",
+  messagingSenderId: "404314933094",
+  appId: "1:404314933094:web:00b80eff40dfbca52a6aa7"
+};
+/* ============================================================ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, deleteDoc, updateDoc, addDoc, collection, onSnapshot, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const LS = {
+  get(k){ try{ return JSON.parse(localStorage.getItem("dm_"+k)); }catch{ return null; } },
+  set(k,v){ try{ localStorage.setItem("dm_"+k, JSON.stringify(v)); }catch{} },
+  del(k){ try{ localStorage.removeItem("dm_"+k); }catch{} }
+};
+const now = () => Date.now();
+const fmtTime = ms => new Date(ms).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+const ago = ms => { const s = Math.round((now()-ms)/1000); return s<60? `${s}초 전` : `${Math.round(s/60)}분 전`; };
+const CAMPUS = [35.8966, 128.8296]; // 경일대 근처
+const LIVE_MS = 10*60*1000;   // 10분 안에 갱신된 위치만 표시
+const TRIP_MS = 6*60*60*1000; // 6시간 지난 귀갓길은 숨김
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("on"),2600); }
+function show(id){
+  $$(".screen").forEach(s=>s.classList.remove("on"));
+  $("#s-"+id).classList.add("on");
+  window.scrollTo(0,0);
+  if(id==="find") renderTrips();
+  if(id==="share") setTimeout(()=>initMap("map"),50);
+  if(id==="map") setTimeout(()=>initMap("map2"),50);
+  if(id==="sos" && !mySos){ $("#sos-ready").style.display=""; $("#sos-sent").style.display="none"; }
+}
+document.addEventListener("click", e=>{ const g=e.target.closest("[data-go]"); if(g) show(g.dataset.go); });
+
+if(!FIREBASE_CONFIG.apiKey){ show("setup"); throw new Error("Firebase config missing"); }
+
+const app = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let uid=null, me=LS.get("me"), group=LS.get("group");
+let members={}, trips={}, locs={}, events=[];
+let unsubs=[];
+const startedAt = now();
+
+const gcol = name => collection(db,"groups",group,name);
+const gdoc = (name,id) => doc(db,"groups",group,name,id);
+
+onAuthStateChanged(auth, async user=>{
+  if(!user){ try{ await signInAnonymously(auth); }catch(e){ toast("로그인 실패: Firebase에서 익명 로그인을 켜 주세요"); console.error(e); } return; }
+  uid = user.uid;
+  if(me && group) enter(); else fillJoin();
+});
+
+function fillJoin(){
+  if(me){ $("#j-nick").value=me.nick||""; $("#j-dept").value=me.dept||""; $("#j-year").value=me.year||""; $("#j-contact").value=me.contact||""; }
+  if(group) $("#j-group").value=group;
+  show("join");
+}
+$("#j-go").onclick = ()=>{
+  const g = $("#j-group").value.trim().replace(/[^0-9A-Za-z가-힣_-]/g,"");
+  const nick = $("#j-nick").value.trim(), dept=$("#j-dept").value.trim();
+  if(!g) return toast("모임 코드를 입력해 주세요");
+  if(!nick) return toast("닉네임을 입력해 주세요");
+  if(!dept) return toast("학과를 입력해 주세요");
+  me = { nick, dept, year:$("#j-year").value.replace(/\D/g,""), contact:$("#j-contact").value.trim() };
+  group = g; LS.set("me",me); LS.set("group",group);
+  enter();
+};
+$("#h-logout").onclick = ()=>{ stopSharing(false); unsubs.forEach(u=>u()); unsubs=[]; fillJoin(); };
+
+async function enter(){
+  unsubs.forEach(u=>u()); unsubs=[];
+  try{
+    await setDoc(gdoc("members",uid), { nick:me.nick, dept:me.dept, year:me.year, seen:now() });
+  }catch(e){ console.error(e); toast("저장 실패: Firestore 규칙을 확인해 주세요"); }
+  $("#h-me").textContent = `${me.dept}${me.year? " "+me.year+"학번":""} · ${me.nick}`;
+  $("#h-group").textContent = "모임: "+group;
+  unsubs.push(onSnapshot(gcol("members"), s=>{ members={}; s.forEach(d=>members[d.id]=d.data()); renderMembers(); }));
+  unsubs.push(onSnapshot(gcol("trips"), s=>{ trips={}; s.forEach(d=>trips[d.id]={id:d.id,...d.data()}); renderTrips(); }));
+  unsubs.push(onSnapshot(gcol("locs"), s=>{ locs={}; s.forEach(d=>locs[d.id]=d.data()); renderLocs(); }));
+  unsubs.push(onSnapshot(gcol("events"), s=>{
+    s.docChanges().forEach(ch=>{ const ev={id:ch.doc.id,...ch.doc.data()}; handleEvent(ev, ch.type); });
+  }));
+  show("home");
+}
+
+/* ---------- 멤버 / 홈 ---------- */
+function renderMembers(){
+  const list = Object.entries(members);
+  $("#h-count").textContent = `(${list.length}명)`;
+  $("#h-members").innerHTML = list.map(([id,m])=>`${id===uid?"⭐":"•"} ${esc(m.nick)} <span style="opacity:.6">${esc(m.dept)}${m.year?" "+esc(m.year)+"학번":""}</span>`).join("<br>") || "아직 없어요";
+}
+
+/* ---------- 동행 찾기 ---------- */
+$$(".chips[data-for]").forEach(box=>{
+  box.addEventListener("click", e=>{
+    const c=e.target.closest(".chip"); if(!c) return;
+    $("#"+box.dataset.for).value=c.textContent;
+    box.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));
+  });
+});
+function setTimeIn(min){ const d=new Date(now()+min*60000); $("#f-time").value=`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+setTimeIn(0);
+$("#f-timechips").addEventListener("click", e=>{
+  const c=e.target.closest(".chip"); if(!c) return;
+  setTimeIn(+c.dataset.min);
+  $$("#f-timechips .chip").forEach(x=>x.classList.toggle("on",x===c));
+});
+
+$("#f-post").onclick = async ()=>{
+  const from=$("#f-from").value.trim(), to=$("#f-to").value.trim(), time=$("#f-time").value;
+  if(!from||!to) return toast("출발지와 목적지를 입력해 주세요");
+  const btn=$("#f-post"); btn.disabled=true;
+  try{
+    // 이전에 올린 열린 귀갓길은 정리
+    for(const t of Object.values(trips)) if(t.uid===uid && t.status!=="done") await updateDoc(gdoc("trips",t.id),{status:"done"});
+    await addDoc(gcol("trips"), { uid, nick:me.nick, dept:me.dept, year:me.year, from, to, time, createdAt:now(), status:"open", requests:{} });
+    toast("귀갓길을 올렸어요! 친구들의 신청을 기다려요");
+    $("#sh-to").value = to;
+  }catch(e){ console.error(e); toast("올리기 실패"); }
+  btn.disabled=false;
+};
+
+function tripCard(t, mine){
+  const reqs = Object.entries(t.requests||{});
+  const myReq = t.requests?.[uid];
+  let act="";
+  if(mine){
+    act = reqs.length ? reqs.map(([rid,r])=>`
+      <div style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line)">
+        <span>🙋 <b>${esc(r.nick)}</b> <span class="muted">${esc(r.dept)}</span></span>
+        ${r.status==="accepted" ? `<span class="tag">함께 가요 ✓</span>` :
+          r.status==="rejected" ? `<span class="muted">거절함</span>` :
+          `<span><button class="btn sm gold" data-acc="${t.id}|${rid}">수락</button> <button class="btn sm ghost" data-rej="${t.id}|${rid}">거절</button></span>`}
+      </div>`).join("") : `<span class="muted">아직 신청이 없어요</span>`;
+    act += `<div style="width:100%;margin-top:6px"><button class="btn sm ghost" data-close="${t.id}">귀갓길 내리기</button></div>`;
+  }else{
+    act = !myReq ? `<button class="btn sm gold" data-req="${t.id}">동행 신청</button>` :
+      myReq.status==="accepted" ? `<span class="tag">수락됨! ${esc(t.from)}에서 만나요</span>` :
+      myReq.status==="rejected" ? `<span class="muted">이번엔 어려워요</span>` :
+      `<span class="tag gold">신청함 · 기다리는 중</span> <button class="btn sm ghost" data-unreq="${t.id}">취소</button>`;
+  }
+  const accepted = reqs.filter(([,r])=>r.status==="accepted").length;
+  return `<div class="card">
+    <div class="top"><span class="nm">${esc(t.nick)}</span><span class="tag">${esc(t.dept)}${t.year?" "+esc(t.year)+"학번":""}</span>${accepted?`<span class="tag gold">동행 ${accepted}명</span>`:""}</div>
+    <div class="rt">${esc(t.from)} → ${esc(t.to)}</div>
+    <div class="rt" style="color:var(--gold)">⏰ ${esc(t.time)} 출발 · ${ago(t.createdAt)} 올림</div>
+    <div class="act">${act}</div></div>`;
+}
+function renderTrips(){
+  const live = Object.values(trips).filter(t=>t.status!=="done" && now()-t.createdAt<TRIP_MS).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  const mine = live.filter(t=>t.uid===uid), others=live.filter(t=>t.uid!==uid);
+  const wantTo = $("#f-to").value.trim();
+  others.sort((a,b)=>(b.to===wantTo)-(a.to===wantTo));
+  $("#f-mine").innerHTML = mine.map(t=>tripCard(t,true)).join("") || `<div class="empty">위에서 귀갓길을 올려 보세요</div>`;
+  $("#f-list").innerHTML = others.map(t=>tripCard(t,false)).join("") || `<div class="empty">아직 올라온 귀갓길이 없어요.<br>친구들에게 QR을 공유해 보세요!</div>`;
+}
+document.addEventListener("click", async e=>{
+  const b=e.target.closest("[data-req],[data-unreq],[data-acc],[data-rej],[data-close]"); if(!b) return;
+  b.disabled=true;
+  try{
+    if(b.dataset.req) await updateDoc(gdoc("trips",b.dataset.req), {[`requests.${uid}`]:{nick:me.nick,dept:me.dept,status:"pending",at:now()}});
+    if(b.dataset.unreq) await updateDoc(gdoc("trips",b.dataset.unreq), {[`requests.${uid}`]:deleteField()});
+    if(b.dataset.acc){ const [t,r]=b.dataset.acc.split("|"); await updateDoc(gdoc("trips",t), {[`requests.${r}.status`]:"accepted", status:"matched"}); }
+    if(b.dataset.rej){ const [t,r]=b.dataset.rej.split("|"); await updateDoc(gdoc("trips",t), {[`requests.${r}.status`]:"rejected"}); }
+    if(b.dataset.close) await updateDoc(gdoc("trips",b.dataset.close), {status:"done"});
+  }catch(err){ console.error(err); toast("처리 실패, 다시 시도해 주세요"); b.disabled=false; }
+});
+
+/* ---------- 지도 ---------- */
+const maps={}, layers={};
+function initMap(id){
+  if(typeof L==="undefined") return;
+  if(!maps[id]){
+    maps[id]=L.map(id,{zoomControl:true}).setView(CAMPUS,15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(maps[id]);
+    layers[id]=L.layerGroup().addTo(maps[id]);
+  }
+  maps[id].invalidateSize();
+  renderLocs(true);
+}
+function renderLocs(fit){
+  const live = Object.entries(locs).filter(([,l])=>now()-l.ts<LIVE_MS);
+  $("#h-live").textContent = live.length;
+  for(const id of Object.keys(maps)){
+    layers[id].clearLayers();
+    const pts=[];
+    live.forEach(([lid,l])=>{
+      const cls = l.sos ? "mk sos" : lid===uid ? "mk me" : "mk";
+      const label = (lid===uid?"나":esc(l.nick)) + (l.sos?" 🚨":"");
+      L.marker([l.lat,l.lng],{icon:L.divIcon({className:"",html:`<div class="${cls}">${label}</div>`,iconSize:null})})
+        .bindPopup(`<b>${esc(l.nick)}</b><br>${l.to?"→ "+esc(l.to)+"<br>":""}${ago(l.ts)} 갱신`).addTo(layers[id]);
+      if(l.acc) L.circle([l.lat,l.lng],{radius:Math.min(l.acc,200),color:"#5aa9ff",weight:1,fillOpacity:.08}).addTo(layers[id]);
+      pts.push([l.lat,l.lng]);
+    });
+    if(fit===true && pts.length) maps[id].fitBounds(pts,{padding:[40,40],maxZoom:17});
+  }
+  $("#m-list").innerHTML = live.length ? live.map(([lid,l])=>`<div class="card"><div class="top"><span class="nm">${lid===uid?"나":esc(l.nick)}</span>${l.sos?'<span class="tag" style="color:var(--red);border-color:var(--red)">SOS</span>':'<span class="tag">귀가 중</span>'}</div><div class="rt">${l.to?"→ "+esc(l.to)+" · ":""}${ago(l.ts)} 갱신</div></div>`).join("")
+    : `<div class="empty">지금 위치를 공유 중인 친구가 없어요</div>`;
+}
+setInterval(()=>{ if(group) renderLocs(); }, 30000);
+
+/* ---------- 위치 공유 ---------- */
+let watchId=null, lastSent=0, lastPos=null, shareStart=0, timerInt=null, wakeLock=null;
+async function keepAwake(){ try{ if("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); }catch{} }
+document.addEventListener("visibilitychange", ()=>{ if(watchId!==null && document.visibilityState==="visible") keepAwake(); });
+
+async function sendLoc(pos, force){
+  lastPos = pos;
+  $("#sh-acc").textContent = `±${Math.round(pos.coords.accuracy)}m`;
+  if(!force && now()-lastSent < 8000) return;
+  lastSent = now();
+  try{
+    await setDoc(gdoc("locs",uid), { nick:me.nick, lat:pos.coords.latitude, lng:pos.coords.longitude, acc:Math.round(pos.coords.accuracy), ts:now(), to:$("#sh-to").value.trim(), sos:!!mySos });
+    $("#sh-last").textContent = fmtTime(now());
+  }catch(e){ console.error(e); }
+}
+function startSharing(){
+  if(!("geolocation" in navigator)) return toast("이 브라우저는 위치를 지원하지 않아요");
+  $("#sh-state").textContent="위치 권한 요청 중…";
+  watchId = navigator.geolocation.watchPosition(
+    p=>{ if(!shareStart){ shareStart=now(); onShareOn(); } sendLoc(p); },
+    err=>{ toast(err.code===1 ? "위치 권한을 허용해 주세요 (설정 → Safari → 위치)" : "위치를 찾지 못했어요"); if(!shareStart) stopSharing(false); },
+    { enableHighAccuracy:true, maximumAge:5000, timeout:20000 }
+  );
+}
+function onShareOn(){
+  keepAwake();
+  $("#sh-state").textContent="공유 중 🟢"; $("#sh-on").textContent="ON";
+  $("#sh-start").style.display="none"; $("#sh-arrive").style.display=""; $("#sh-stop").style.display="";
+  timerInt=setInterval(()=>{ const s=Math.round((now()-shareStart)/1000); $("#sh-timer").textContent=`${Math.floor(s/60)}분 ${s%60}초`; },1000);
+  toast("친구들에게 내 위치가 보이기 시작했어요");
+}
+async function stopSharing(arrived){
+  if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+  watchId=null; shareStart=0; clearInterval(timerInt);
+  try{ wakeLock && wakeLock.release(); }catch{} wakeLock=null;
+  $("#sh-state").textContent="꺼짐"; $("#sh-on").textContent=""; $("#sh-timer").textContent="-";
+  $("#sh-start").style.display=""; $("#sh-arrive").style.display="none"; $("#sh-stop").style.display="none";
+  if(uid && group){
+    try{ await deleteDoc(gdoc("locs",uid)); }catch{}
+    if(arrived){
+      try{ await addDoc(gcol("events"), { type:"arrived", uid, nick:me.nick, to:$("#sh-to").value.trim(), ts:now() }); }catch{}
+      for(const t of Object.values(trips)) if(t.uid===uid && t.status!=="done") try{ await updateDoc(gdoc("trips",t.id),{status:"done"}); }catch{}
+    }
+  }
+}
+$("#sh-start").onclick = startSharing;
+$("#sh-stop").onclick = ()=>{ stopSharing(false); toast("위치 공유를 껐어요"); };
+$("#sh-arrive").onclick = async ()=>{ await stopSharing(true); show("done"); };
+
+/* ---------- SOS ---------- */
+let mySos=null;
+function mapLink(lat,lng){ return `https://maps.google.com/?q=${lat},${lng}`; }
+$("#sos-fire").onclick = async ()=>{
+  $("#sos-ready").style.display="none"; $("#sos-sent").style.display="";
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const send = async (lat,lng,acc)=>{
+    const data = { type:"sos", uid, nick:me.nick, dept:me.dept, ts:now(), resolved:false };
+    if(lat!=null){ data.lat=lat; data.lng=lng; data.acc=acc; }
+    try{ const ref = await addDoc(gcol("events"), data); mySos = ref.id; }catch(e){ console.error(e); toast("SOS 전송 실패! 112에 직접 전화하세요"); }
+    if(lat!=null){
+      $("#sos-pos").textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)} (±${Math.round(acc)}m)`;
+      try{ await setDoc(gdoc("locs",uid), { nick:me.nick, lat, lng, acc:Math.round(acc), ts:now(), to:"", sos:true }); }catch{}
+    }else $("#sos-pos").textContent = "위치를 못 찾았어요 (알림은 보냈어요)";
+    const body = `[동행메이트 긴급] ${me.nick}입니다. 도움이 필요해요!` + (lat!=null? ` 내 위치: ${mapLink(lat,lng)}` : "");
+    const num = (me.contact||"").replace(/[^0-9+]/g,"");
+    const smsEl = $("#sos-sms");
+    if(num){ smsEl.href = `sms:${num}${isIOS?"&":"?"}body=${encodeURIComponent(body)}`; smsEl.style.display=""; }
+    else smsEl.style.display="none";
+    $("#sos-info").textContent = `${Object.keys(members).length-1}명의 모임 친구에게 알림을 보냈어요.`;
+  };
+  if("geolocation" in navigator){
+    navigator.geolocation.getCurrentPosition(p=>send(p.coords.latitude,p.coords.longitude,p.coords.accuracy), ()=>send(null), {enableHighAccuracy:true,timeout:8000,maximumAge:10000});
+  } else send(null);
+};
+$("#sos-cancel").onclick = async ()=>{
+  if(mySos){ try{ await updateDoc(gdoc("events",mySos),{resolved:true}); }catch{} }
+  mySos=null;
+  if(watchId===null){ try{ await deleteDoc(gdoc("locs",uid)); }catch{} }
+  toast("SOS를 해제했어요. 친구들에게도 알려졌어요");
+  show("home");
+};
+
+/* ---------- 이벤트 수신 ---------- */
+function beep(){
+  try{
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.35,0.7].forEach(t=>{ const o=ac.createOscillator(), g=ac.createGain(); o.frequency.value=880; o.connect(g); g.connect(ac.destination); g.gain.setValueAtTime(.3,ac.currentTime+t); o.start(ac.currentTime+t); o.stop(ac.currentTime+t+0.25); });
+  }catch{}
+  try{ navigator.vibrate && navigator.vibrate([400,200,400,200,400]); }catch{}
+}
+let shownSos=null;
+function handleEvent(ev, type){
+  if(ev.uid===uid) return;
+  const dismissed = LS.get("dismissed")||[];
+  if(ev.type==="sos"){
+    if(ev.resolved){
+      if(shownSos===ev.id){ $("#ov").classList.remove("on"); shownSos=null; }
+      if(type==="modified") toast(`${ev.nick}님이 SOS를 해제했어요 (괜찮대요)`);
+      return;
+    }
+    if(now()-ev.ts > 30*60*1000 || dismissed.includes(ev.id)) return;
+    shownSos = ev.id;
+    $("#ov-title").textContent = `${ev.nick}님이 SOS를 보냈어요!`;
+    $("#ov-body").textContent = `${ev.dept||""} · ${fmtTime(ev.ts)}` + (ev.lat!=null? "" : " · 위치 정보 없음");
+    const m=$("#ov-map");
+    if(ev.lat!=null){ m.href=mapLink(ev.lat,ev.lng); m.style.display=""; } else m.style.display="none";
+    $("#ov").classList.add("on");
+    beep();
+  }
+  if(ev.type==="arrived" && type==="added" && ev.ts>startedAt-60000){
+    toast(`💛 ${ev.nick}님이 ${ev.to? ev.to+"에 ":""}안전하게 도착했어요`);
+  }
+}
+$("#ov-close").onclick = ()=>{
+  const d=LS.get("dismissed")||[]; if(shownSos){ d.push(shownSos); LS.set("dismissed",d.slice(-50)); }
+  $("#ov").classList.remove("on"); shownSos=null;
+};
+</script>
+</body>
+</html>
